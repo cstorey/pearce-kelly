@@ -1,6 +1,7 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use pearce_kelly::ToplogicalOrdering;
+use petgraph::visit::EdgeRef;
 
 // Invariants:
 // After successfully adding an edge x→y to an ordering o, then:
@@ -268,13 +269,49 @@ fn inserts_each_item_only_once() {
 }
 
 #[test]
-#[ignore]
-fn must_fail_on_cycle_insertion_2_node() {
-    todo!()
+fn must_not_include_edge_on_2_node_insertion_failure() {
+    let mut ord = ToplogicalOrdering::default();
+    let a_ix = ord.add_node('a');
+    let b_ix = ord.add_node('b');
+    println!("a: {:?}; b:{:?};", a_ix, b_ix);
+
+    ord.add_edge(a_ix, b_ix, ()).expect("add edge");
+    ord.add_edge(b_ix, a_ix, ())
+        .expect_err("add adding cycle should fail");
+
+    let edges = ord
+        .edge_references()
+        .map(|e| (e.source(), e.target()))
+        .collect::<BTreeSet<_>>();
+
+    assert!(
+        !edges.contains(&(b_ix, a_ix)),
+        "Edges: {:?} do not contain b → a",
+        edges,
+    );
 }
 
 #[test]
-#[ignore]
-fn must_fail_on_cycle_insertion_3_node() {
-    todo!()
+fn must_not_include_edge_on_3_node_insertion_failure() {
+    let mut ord = ToplogicalOrdering::default();
+    let a_ix = ord.add_node('a');
+    let b_ix = ord.add_node('b');
+    let c_ix = ord.add_node('c');
+    println!("a: {:?}; b:{:?}; c:{:?};", a_ix, b_ix, c_ix);
+
+    ord.add_edge(a_ix, b_ix, ()).expect("Add edge a,b");
+    ord.add_edge(b_ix, c_ix, ()).expect("Add edge b,c");
+    ord.add_edge(c_ix, a_ix, ())
+        .expect_err("add adding cycle (c,a) should fail");
+
+    let edges = ord
+        .edge_references()
+        .map(|e| (e.source(), e.target()))
+        .collect::<BTreeSet<_>>();
+
+    assert!(
+        !edges.contains(&(c_ix, a_ix)),
+        "Edges: {:?} do not contain c → a",
+        edges,
+    );
 }

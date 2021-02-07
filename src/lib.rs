@@ -1,6 +1,11 @@
 use std::{collections::HashSet, fmt, hash::Hash};
 
-use petgraph::{graph::NodeIndex, stable_graph::StableGraph, Direction};
+use petgraph::{
+    graph::NodeIndex,
+    stable_graph::{EdgeReference, StableGraph},
+    visit::IntoEdgeReferences,
+    Direction,
+};
 
 mod error;
 
@@ -41,7 +46,6 @@ where
     N: Eq + Clone + Hash + fmt::Debug,
 {
     pub fn add_edge(&mut self, x: NodeIndex, y: NodeIndex, weight: E) -> Result<()> {
-        self.inner.add_edge(x, y, weight);
         let ub = self.ensure_rank(x);
         let lb = self.ensure_rank(y);
         println!("x: {:?}; ub:{:?}; y: {:?}; lb: {:?}", x, ub, y, lb);
@@ -76,6 +80,8 @@ where
 
         println!("Post insert {:?} → {:?}: {:?}", x, y, self.items);
 
+        self.inner.add_edge(x, y, weight);
+
         Ok(())
     }
 
@@ -90,8 +96,7 @@ where
         for w in self.inner.neighbors_directed(n, Direction::Outgoing) {
             let ordw = self.rank(w)?;
             if ordw == state.ub {
-                // TODO
-                // return Err(TopologicalOrderingError::CycleDetected);
+                return Err(TopologicalOrderingError::CycleDetected);
             }
             if !state.visited.contains(&w) && ordw < state.ub {
                 println!(
@@ -247,5 +252,9 @@ where
 
     pub fn node_weight(&self, ix: NodeIndex) -> Option<&N> {
         self.inner.node_weight(ix)
+    }
+
+    pub fn edge_references(&self) -> impl Iterator<Item = EdgeReference<E, u32>> {
+        self.inner.edge_references()
     }
 }
